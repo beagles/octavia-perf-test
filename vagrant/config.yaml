@@ -1,0 +1,84 @@
+# Octavia Performance Test - VM Configuration
+#
+# This file configures the VMs for performance testing.
+# Adjust memory, CPUs, and counts based on your host capacity.
+
+# Network configuration
+networks:
+  management:
+    subnet: "192.168.100.0/24"
+    gateway: "192.168.100.1"
+  vip:
+    subnet: "192.168.200.0/24"
+    gateway: "192.168.200.1"
+  member:
+    subnet: "192.168.201.0/24"
+    gateway: "192.168.201.1"
+
+# VM definitions
+vms:
+  # OpenStack control plane - runs all OpenStack services
+  controller:
+    hostname: "octavia-controller"
+    box: "generic/ubuntu2204"
+    memory: 8192
+    cpus: 4
+    networks:
+      management: "192.168.100.10"
+      vip: "192.168.200.10"
+
+  # Nova compute node - hosts amphora VMs
+  compute:
+    count: 1
+    hostname_prefix: "octavia-compute"
+    box: "generic/ubuntu2204"
+    memory: 4096
+    cpus: 2
+    nested_virt: true
+    networks:
+      management_base: "192.168.100.20"
+      vip_base: "192.168.200.20"
+      member_base: "192.168.201.20"
+
+  # Backend HTTP servers
+  backend:
+    count: 3
+    hostname_prefix: "backend"
+    box: "generic/ubuntu2204"
+    memory: 1024
+    cpus: 1
+    networks:
+      member_base: "192.168.201.10"
+
+  # Load generator with Locust and metric collectors
+  loadgen:
+    hostname: "locust-master"
+    box: "generic/ubuntu2204"
+    memory: 4096
+    cpus: 4
+    networks:
+      vip: "192.168.200.100"
+
+# OpenStack configuration
+openstack:
+  # DevStack branch to use
+  devstack_branch: "master"
+
+  # Octavia specific settings
+  octavia:
+    # Management network for amphora
+    mgmt_subnet: "192.168.100.0/24"
+    mgmt_subnet_start: "192.168.100.100"
+    mgmt_subnet_end: "192.168.100.200"
+
+    # Health manager settings
+    health_manager_bind_ip: "192.168.100.10"
+    health_manager_port: 5555
+
+# Test settings
+test:
+  # VIP to be created for testing
+  vip_address: "192.168.200.50"
+
+  # Backend server port
+  backend_port: 80

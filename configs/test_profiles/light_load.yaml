@@ -1,0 +1,61 @@
+# Light Load Test Profile
+#
+# A gentle test with low user count for basic validation
+# and initial bottleneck identification.
+
+test:
+  name: "light-load"
+  duration: 120  # 2 minutes
+  notes: "Light load test for baseline measurement"
+
+locust:
+  host: "http://192.168.200.50"  # VIP address
+  users: 10
+  spawn_rate: 2
+  scenarios:
+    - BasicHTTPUser
+
+collectors:
+  haproxy_stats:
+    enabled: true
+    interval: 1  # seconds
+    # Uncomment and configure when amphora is deployed:
+    # amphora_ip: "192.168.100.100"
+    # lb_id: "your-lb-id-here"
+    # ssh_key: "/path/to/amphora_ssh_key"
+    # ssh_username: "ubuntu"
+
+  amphora_api:
+    enabled: true
+    interval: 5
+    # Uncomment and configure when amphora is deployed:
+    # amphora_ip: "192.168.100.100"
+    # client_cert: "/etc/octavia/certs/client.pem"
+    # server_ca: "/etc/octavia/certs/server_ca.pem"
+    verify_ssl: false
+
+  system_metrics:
+    enabled: true
+    interval: 5
+    backends:
+      - id: "backend-1"
+        ip: "192.168.201.10"
+        username: "vagrant"
+      - id: "backend-2"
+        ip: "192.168.201.11"
+        username: "vagrant"
+      - id: "backend-3"
+        ip: "192.168.201.12"
+        username: "vagrant"
+
+analysis:
+  bottleneck_detection: true
+
+report:
+  output_dir: "./reports"
+  formats:
+    - html
+  export_json: true
+
+storage:
+  path: "./data/metrics.db"

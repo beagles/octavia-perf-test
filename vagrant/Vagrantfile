@@ -1,0 +1,168 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'yaml'
+
+# Load configuration
+config_file = File.join(File.dirname(__FILE__), 'config.yaml')
+unless File.exist?(config_file)
+  abort("Configuration file not found: #{config_file}\nCopy config.yaml.example to config.yaml and customize.")
+end
+cfg = YAML.load_file(config_file)
+
+Vagrant.configure("2") do |config|
+  # Global settings
+  config.vm.box_check_update = false
+
+  # Libvirt provider settings
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.driver = "kvm"
+    libvirt.uri = "qemu:///system"
+  end
+
+  # ============================================================
+  # Controller VM - OpenStack control plane
+  # ============================================================
+  config.vm.define "controller" do |node|
+    vm_cfg = cfg['vms']['controller']
+
+    node.vm.box = vm_cfg['box']
+    node.vm.hostname = vm_cfg['hostname']
+
+    # Management network
+    node.vm.network :private_network,
+      ip: vm_cfg['networks']['management'],
+      libvirt__network_name: "octavia-mgmt",
+      libvirt__dhcp_enabled: false
+
+    # VIP network
+    node.vm.network :private_network,
+      ip: vm_cfg['networks']['vip'],
+      libvirt__network_name: "octavia-vip",
+      libvirt__dhcp_enabled: false
+
+    node.vm.provider :libvirt do |v|
+      v.memory = vm_cfg['memory']
+      v.cpus = vm_cfg['cpus']
+    end
+
+    node.vm.provision "shell", path: "scripts/bootstrap-controller.sh", env: {
+      "MGMT_IP" => vm_cfg['networks']['management'],
+      "VIP_NETWORK" => cfg['networks']['vip']['subnet'],
+      "MEMBER_NETWORK" => cfg['networks']['member']['subnet'],
+      "DEVSTACK_BRANCH" => cfg['openstack']['devstack_branch'],
+      "OCTAVIA_MGMT_SUBNET" => cfg['openstack']['octavia']['mgmt_subnet'],
+      "OCTAVIA_MGMT_SUBNET_START" => cfg['openstack']['octavia']['mgmt_subnet_start'],
+      "OCTAVIA_MGMT_SUBNET_END" => cfg['openstack']['octavia']['mgmt_subnet_end'],
+      "OCTAVIA_HM_BIND_IP" => cfg['openstack']['octavia']['health_manager_bind_ip'],
+      "OCTAVIA_HM_PORT" => cfg['openstack']['octavia']['health_manager_port'].to_s
+    }
+  end
+
+  # ============================================================
+  # Compute VMs - Nova compute nodes for amphorae
+  # ============================================================
+  compute_count = cfg['vms']['compute']['count']
+  (1..compute_count).each do |i|
+    config.vm.define "compute-#{i}" do |node|
+      vm_cfg = cfg['vms']['compute']
+
+      node.vm.box = vm_cfg['box']
+      node.vm.hostname = "#{vm_cfg['hostname_prefix']}-#{i}"
+
+      # Calculate IPs based on index
+      mgmt_ip = vm_cfg['networks']['management_base'].gsub(/\.\d+$/, ".#{20 + i - 1}")
+      vip_ip = vm_cfg['networks']['vip_base'].gsub(/\.\d+$/, ".#{20 + i - 1}")
+      member_ip = vm_cfg['networks']['member_base'].gsub(/\.\d+$/, ".#{20 + i - 1}")
+
+      # Management network
+      node.vm.network :private_network,
+        ip: mgmt_ip,
+        libvirt__network_name: "octavia-mgmt",
+        libvirt__dhcp_enabled: false
+
+      # VIP network
+      node.vm.network :private_network,
+        ip: vip_ip,
+        libvirt__network_name: "octavia-vip",
+        libvirt__dhcp_enabled: false
+
+      # Member network
+      node.vm.network :private_network,
+        ip: member_ip,
+        libvirt__network_name: "octavia-member",
+        libvirt__dhcp_enabled: false
+
+      node.vm.provider :libvirt do |v|
+        v.memory = vm_cfg['memory']
+        v.cpus = vm_cfg['cpus']
+        v.nested = vm_cfg['nested_virt']
+        v.cpu_mode = "host-passthrough"
+      end
+
+      node.vm.provision "shell", path: "scripts/bootstrap-compute.sh", env: {
+        "CONTROLLER_IP" => cfg['vms']['controller']['networks']['management'],
+        "COMPUTE_INDEX" => i.to_s
+      }
+    end
+  end
+
+  # ============================================================
+  # Backend VMs - HTTP servers for load balancing targets
+  # ============================================================
+  backend_count = cfg['vms']['backend']['count']
+  (1..backend_count).each do |i|
+    config.vm.define "backend-#{i}" do |node|
+      vm_cfg = cfg['vms']['backend']
+
+      node.vm.box = vm_cfg['box']
+      node.vm.hostname = "#{vm_cfg['hostname_prefix']}-#{i}"
+
+      # Calculate IP based on index
+      member_ip = vm_cfg['networks']['member_base'].gsub(/\.\d+$/, ".#{10 + i - 1}")
+
+      # Member network only
+      node.vm.network :private_network,
+        ip: member_ip,
+        libvirt__network_name: "octavia-member",
+        libvirt__dhcp_enabled: false
+
+      node.vm.provider :libvirt do |v|
+        v.memory = vm_cfg['memory']
+        v.cpus = vm_cfg['cpus']
+      end
+
+      node.vm.provision "shell", path: "scripts/bootstrap-backend.sh", env: {
+        "BACKEND_INDEX" => i.to_s,
+        "BACKEND_PORT" => cfg['test']['backend_port'].to_s
+      }
+    end
+  end
+
+  # ============================================================
+  # Load Generator VM - Locust and metric collectors
+  # ============================================================
+  config.vm.define "loadgen" do |node|
+    vm_cfg = cfg['vms']['loadgen']
+
+    node.vm.box = vm_cfg['box']
+    node.vm.hostname = vm_cfg['hostname']
+
+    # VIP network (to reach load balancer)
+    node.vm.network :private_network,
+      ip: vm_cfg['networks']['vip'],
+      libvirt__network_name: "octavia-vip",
+      libvirt__dhcp_enabled: false
+
+    node.vm.provider :libvirt do |v|
+      v.memory = vm_cfg['memory']
+      v.cpus = vm_cfg['cpus']
+    end
+
+    # Sync the project directory
+    node.vm.synced_folder "..", "/opt/octavia-perf-test", type: "rsync",
+      rsync__exclude: [".git/", "vagrant/.vagrant/", "__pycache__/", "*.pyc"]
+
+    node.vm.provision "shell", path: "scripts/bootstrap-loadgen.sh"
+  end
+end
