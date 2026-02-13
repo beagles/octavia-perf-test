@@ -132,6 +132,10 @@ SERVICE_PASSWORD=secret
 # Only run compute services with OVN
 ENABLED_SERVICES=n-cpu,placement-client,ovn-controller,ovs-vswitchd,ovsdb-server,q-ovn-metadata-agent
 
+# Disable IPv6 (not needed for perf testing, causes issues in VMs)
+IP_VERSION=4
+SERVICE_IP_VERSION=4
+
 # Logging
 LOGFILE=/opt/stack/logs/stack.sh.log
 LOGDIR=/opt/stack/logs

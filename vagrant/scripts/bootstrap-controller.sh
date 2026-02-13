@@ -128,15 +128,24 @@ Q_ML2_PLUGIN_TYPE_DRIVERS=local,flat,vlan,geneve
 Q_ML2_TENANT_NETWORK_TYPE="geneve"
 ENABLE_CHASSIS_AS_GW=True
 
-# Enable OVN services
+# OVN Database and services
 enable_service ovn-northd
 enable_service ovn-controller
-enable_service networking-ovn-metadata-agent
+enable_service ovs-vswitchd
+enable_service ovsdb-server
+
+# Neutron services for OVN
 enable_service q-svc
+enable_service q-ovn-metadata-agent
 enable_service q-trunk
 enable_service q-dns
 enable_service q-port-forwarding
-enable_service q-log
+
+# Physical network bridge mapping for provider networks
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+OVN_L3_CREATE_PUBLIC_NETWORK=True
+PUBLIC_BRIDGE=br-ex
+OVN_BRIDGE_MAPPINGS=public:br-ex
 
 # Disable legacy Neutron services (not needed with OVN)
 disable_service q-agt
@@ -168,10 +177,15 @@ OCTAVIA_MGMT_SUBNET_END=${OCTAVIA_MGMT_SUBNET_END}
 # Set to False if you want to build your own
 OCTAVIA_USE_PREGENERATED_CERTS=True
 
+# Disable IPv6 (not needed for perf testing, causes issues in VMs)
+IP_VERSION=4
+SERVICE_IP_VERSION=4
+
 # Logging
 LOGFILE=/opt/stack/logs/stack.sh.log
 LOGDIR=/opt/stack/logs
 LOG_COLOR=False
+VERBOSE=True
 
 # Networking
 FLOATING_RANGE=${VIP_NETWORK}
@@ -179,6 +193,14 @@ Q_FLOATING_ALLOCATION_POOL=start=192.168.200.50,end=192.168.200.100
 PUBLIC_NETWORK_GATEWAY=192.168.200.1
 Q_USE_SECGROUP=True
 Q_L3_ENABLED=True
+
+# Increase timeouts for slower environments
+SERVICE_TIMEOUT=180
+API_RATE_LIMIT=False
+
+# Fix potential pip/setuptools issues
+PIP_UPGRADE=True
+LIBS_FROM_GIT=""
 
 # Additional plugins for observability (optional)
 # enable_plugin osprofiler https://opendev.org/openstack/osprofiler
