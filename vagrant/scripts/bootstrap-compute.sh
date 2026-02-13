@@ -56,7 +56,7 @@ install_common_packages() {
         python3-venv
 }
 
-CONTROLLER_IP="${CONTROLLER_IP:-192.168.100.10}"
+CONTROLLER_IP="${CONTROLLER_IP:-192.168.150.10}"
 COMPUTE_INDEX="${COMPUTE_INDEX:-1}"
 
 log_info "Bootstrapping compute node ${COMPUTE_INDEX}..."
