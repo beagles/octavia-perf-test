@@ -129,17 +129,17 @@ DATABASE_PASSWORD=secret
 RABBIT_PASSWORD=secret
 SERVICE_PASSWORD=secret
 
-# Only run compute services
-ENABLED_SERVICES=n-cpu,neutron
+# Only run compute services with OVN
+ENABLED_SERVICES=n-cpu,c-vol,placement-client,ovn-controller,ovs-vswitchd,ovsdb-server,q-ovn-metadata-agent
 
 # Logging
 LOGFILE=/opt/stack/logs/stack.sh.log
 LOGDIR=/opt/stack/logs
 LOG_COLOR=False
 
-# Nova compute settings
+# Nova compute settings for VNC
 NOVA_VNC_ENABLED=True
-NOVNCPROXY_URL="http://${CONTROLLER_IP}:6080/vnc_auto.html"
+NOVNCPROXY_URL="http://${CONTROLLER_IP}:6080/vnc_lite.html"
 VNCSERVER_LISTEN=\$HOST_IP
 VNCSERVER_PROXYCLIENT_ADDRESS=\$HOST_IP
 EOF
@@ -161,3 +161,5 @@ log_info "To join the OpenStack cluster, run as stack user:"
 log_info "  sudo -u stack /opt/stack/run_devstack.sh"
 log_info ""
 log_info "Note: Run this AFTER the controller DevStack is complete."
+log_info "After stacking, run from the controller to discover this compute host:"
+log_info "  cd /opt/stack/devstack && ./tools/discover_hosts.sh"

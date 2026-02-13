@@ -121,13 +121,28 @@ DATABASE_PASSWORD=secret
 RABBIT_PASSWORD=secret
 SERVICE_PASSWORD=secret
 
+# Configure Neutron with OVN
+Q_AGENT=ovn
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=ovn
+Q_ML2_PLUGIN_TYPE_DRIVERS=local,flat,vlan,geneve
+Q_ML2_TENANT_NETWORK_TYPE="geneve"
+ENABLE_CHASSIS_AS_GW=True
+
+# Enable OVN services
+enable_service ovn-northd
+enable_service ovn-controller
+enable_service q-ovn-metadata-agent
+enable_service q-svc
+
+# Disable legacy Neutron services (not needed with OVN)
+disable_service q-agt
+disable_service q-l3
+disable_service q-dhcp
+disable_service q-meta
+
 # Disable services we don't need for perf testing
 disable_service tempest
 disable_service horizon
-
-# Enable Neutron
-enable_service neutron
-enable_service q-svc
 
 # Enable Octavia
 enable_plugin octavia https://opendev.org/openstack/octavia ${DEVSTACK_BRANCH}
