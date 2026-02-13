@@ -130,7 +130,7 @@ RABBIT_PASSWORD=secret
 SERVICE_PASSWORD=secret
 
 # Only run compute services with OVN
-ENABLED_SERVICES=n-cpu,c-vol,placement-client,ovn-controller,ovs-vswitchd,ovsdb-server,q-ovn-metadata-agent
+ENABLED_SERVICES=n-cpu,placement-client,ovn-controller,ovs-vswitchd,ovsdb-server,q-ovn-metadata-agent
 
 # Logging
 LOGFILE=/opt/stack/logs/stack.sh.log

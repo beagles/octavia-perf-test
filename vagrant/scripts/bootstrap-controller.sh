@@ -131,14 +131,19 @@ ENABLE_CHASSIS_AS_GW=True
 # Enable OVN services
 enable_service ovn-northd
 enable_service ovn-controller
-enable_service q-ovn-metadata-agent
+enable_service networking-ovn-metadata-agent
 enable_service q-svc
+enable_service q-trunk
+enable_service q-dns
+enable_service q-port-forwarding
+enable_service q-log
 
 # Disable legacy Neutron services (not needed with OVN)
 disable_service q-agt
 disable_service q-l3
 disable_service q-dhcp
 disable_service q-meta
+disable_service cinder c-sch c-api c-vol
 
 # Disable services we don't need for perf testing
 disable_service tempest
