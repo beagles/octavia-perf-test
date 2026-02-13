@@ -17,8 +17,52 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/common.sh"
+# Inline common functions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+wait_for_apt() {
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        log_info "Waiting for apt lock..."
+        sleep 5
+    done
+}
+
+install_common_packages() {
+    wait_for_apt
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq \
+        curl \
+        wget \
+        git \
+        vim \
+        htop \
+        iotop \
+        sysstat \
+        net-tools \
+        iputils-ping \
+        dnsutils \
+        socat \
+        jq \
+        python3 \
+        python3-pip \
+        python3-venv
+}
 
 # Default values
 MGMT_IP="${MGMT_IP:-192.168.100.10}"
