@@ -130,7 +130,7 @@ RABBIT_PASSWORD=secret
 SERVICE_PASSWORD=secret
 
 # Only run compute services
-ENABLED_SERVICES=n-cpu,neutron,q-agt
+ENABLED_SERVICES=n-cpu,neutron
 
 # Logging
 LOGFILE=/opt/stack/logs/stack.sh.log

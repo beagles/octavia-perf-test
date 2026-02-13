@@ -128,10 +128,6 @@ disable_service horizon
 # Enable Neutron
 enable_service neutron
 enable_service q-svc
-enable_service q-agt
-enable_service q-dhcp
-enable_service q-l3
-enable_service q-meta
 
 # Enable Octavia
 enable_plugin octavia https://opendev.org/openstack/octavia ${DEVSTACK_BRANCH}
